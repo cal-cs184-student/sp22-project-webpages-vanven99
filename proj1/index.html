@@ -4,41 +4,48 @@
 	<body>
 		<h1>Overview</h1>
 		<h1>Task 1</h1>
-		<p> I rasterize triangles by first calculating important information that determines the equations used.
-				The first item I calculate is the orientation of the points provided. The orientation is given by the cross product of two vectors.
-				Then, I determine the starting and ending x and y coordinates of the loops. This is done by determining the max and min x and y values given.
-				Then for each pixel in the bounding box I determine if the pixel is within the triangle using the 3-line tests. These tests vary depending on the orientation of the triangle.
-				Finally, if the pixel is determined to be in the triangle I call fill_pixel.
+		<p> I rasterize triangles by first calculating information that determines the equations used.
+				The first item I calculate is the orientation of the points provided which is given by the cross product of the vectors (v2 - v0) and (v1 - v0). If the z value is negative then the triangle is clockwise, else it is counter clockwise.
+		</p>
+		<p> Then I determine the starting and ending x and y coordinates of the rasterize loops. This is done by determining the max and min x and y values given by calculating max(x0, x1, x2) and so on. This will allow me to rasterize the area given by (x_max - x_min) * (y_max - y_min).
+    </p>
+		<p> Then for each pixel in the bounding box I determine if the pixel is within the triangle using the 3-line tests. The pixel is within the triangle if all of the line tests return a positive value, or if one value is 0 and the rest are a positive value (used if the pixel lies on the edge of the triangle). These tests change depending on the orientation of the triangle.
+    </p>
+		<p> Finally, if the pixel is determined to be in the triangle I call fill_pixel().
 		</p>
 		<p> My algorithm is no worse because it is the algorithm that checks each value in the bounding box. This is done by only checking the pixels within the min and max x and y values calculated.
 		</p>
     <img src="../images/q1.PNG">
-		<p> I chose this section of the image as it demonstrates the limited ability of the base rasterizer to accurately represent thin lines. Since the tip of the pink triangle is between the middle of the pixel, it escapes being rasterized correctly.
+		<p> I chose this section of the image as it demonstrates the limited ability of the base rasterizer to accurately represent thin lines. Since the tip of the pink triangle is between two pixels it escapes being rasterized correctly.
 			  This issue is resolved after implementing supersampling.
 		</p>
 		<h1>Task 2</h1>
-		<p> To make the change to supersampling, my rasterizer first draws an image to the sample buffer with dimensions scaled by the supersample rate.
-			  To accomodate the larger image I resize the sample buffer to be sample_rate * width * height. I also clear the buffer when it is resized.
-				Then in rasterize_triangle() I scaled the x and y coordinates of the vertices by multiplying them by sqrt(sample_rate). I use the square root because if we supersample by 4 pixels, the height and width of the image is multiplied by two.
+		<p> To make the switch to supersampling my rasterizer first draws an image to the sample buffer with dimensions scaled by the supersample rate. The size of the new buffer is given by sample_rate * width * height. I also clear the buffer when it is resized.
+		</p>
+		<p> Then in rasterize_triangle() I scaled the x and y coordinates of the vertices by multiplying them by sqrt(sample_rate). I use the square root of the sample rate because if we supersample by 4 pixels, the height and width of the image is multiplied by two.
 				The rest of rasterize_triangle remains the same.
-				In resolve_to_framebuffer() I scaled the loop bounds by sqrt(sample_rate), and incrementing each time by sqrt(sample_rate). I increment by sqrt as I want the original resolution to remain the same. If I instead incremented by 1 the final image resoluation would increase, and no supersampling would take place.
-				In each inner loop I then loop from 0 to sqrt(sample_rate) both vertically and horizontally. This is done so I can average the color of each pixel. In effect this algorithm is akin to caching as each inner loop only concerns itself with its immediate neighbors.
-				Finally I made changes to fill_pixel(). Fill pixel handles two cases, if a line is being drawn or if a pixel is being filled in by rasterize_triangle(). If a line is being drawn, for each pixel fill_pixel() draws sample_rate pixels. This is done because if lines are drawn in their original location then they will be in the corner of the image.
-				If it is not a line then fill_pixel operates the same. This algorithm supersamples lines.
+    </p>
+		<p> In resolve_to_framebuffer() I added two inner loops. The outer loops traverse the upscaled sample buffer, while the inner loop averages the pixel colors for each supersampled pixel.
+		</p>
+		<p> I scaled the outer loop bounds by sqrt(sample_rate) with an increment of sqrt(sample_rate). I increment by sqrt(sample_rate) as I want the amount of pixels in the final buffer to remain the same. If I instead incremented by 1 the final image resoluation would increase as fill_pixel() would be called on each of the upscaled frame buffer pixels.
+				In each inner loop I then loop from 0 to sqrt(sample_rate) both vertically and horizontally. This is done so I can average the color of each pixel. In effect this algorithm is akin to caching as each inner loop only concerns itself with its immediate neighbors, while the outer loop selects which group of pixels to average.
+				Finally I made changes to fill_pixel(). Fill pixel handles two cases, if a line is being drawn or if a pixel is being filled in by rasterize_triangle(). If a line is being drawn, then fill_pixel() instead draws sample_rate pixels to the sample buffer using coordinates upscaled in the same manner as rasterize_triangle(). If it is not a line then fill_pixel() operates normally.
+		</p>
+		<p> While this is technically unnecessary it achieves the effect of supersampling the lines before they are resolved by the framebuffer. If I instead wanted to not anti-alias the lines then I would have fill_pixel() write to the final buffer directly.
 		</p>
 		<img src="../images/q2_1.PNG">
-		<p> Test 4 with sample rate 1. This is the image with no supersampling, and the triangles have multiple aliasing issues. Of particular note is the pink triangle which is missing pixels near the tip. This is because part of the triangle occupies a region between pixels, leading to the 3-line test reporting certain pixels in the triangle as outside.
+		<p> Test 4 with sample rate 1. This is the image with no supersampling, and the triangles have multiple aliasing issues. Of particular note is the pink triangle which is missing pixels near the tip. This is because part of the triangle occupies a region between pixels, leading to the 3-line test reporting certain pixels in the triangle as outside of the triangle.
 		</p>
 		<img src="../images/q2_4.PNG">
-		<p> Test 4 with sample rate 4. With 4 pixel supersampling the tip of the pink triangle that was previously unrasterized appears. This is because with the higher resolution the rasterizer is able to average together the colors near the tip and show the triangle continuously. However because the supersample rate is only 4 pixels, the tip of the triangle remains more transparent as white pixels are averaged with the pink pixels.
+		<p> Test 4 with sample rate 4. With 4 pixel supersampling the tip of the pink triangle that was previously unrasterized appears. This is because with the higher supersample rate the rasterizer is able to average together the colors near the tip and show the triangle continuously. However because the supersample rate is only 4 pixels the tip of the triangle is more transparent than the rest of the triangle. This is because nearby white pixels are averaged with the pink pixels.
 		</p>
 		<img src="../images/q2_16.PNG">
-		<p> Test 4 with sample rate 16. With 16 pixel supersampling the tip is more opaque and closer to the original resolution. This is due to less white pixels affecting the average of the colors in the 4x4 region.
+		<p> Test 4 with sample rate 16. With 16 pixel supersampling the tip is more opaque and the edges of the triangle appear more smooth. This is due to less white pixels affecting the average of the colors in the 4x4 region and the edges of the triangle taking on a more gradual shift from pink to white.
 		</p>
 		<h1>Task 3</h1>
 		<img src="../images/q3.PNG">
-		<p> I positioned my cubeman to mimic Leonardo Da Vinci's Vitruvian Man. I did this by first translating cubeman's arms and legs away from the body. I then rotated his arms and legs by 30 degrees, then translated them back to his torso.
-			  To make the effect work I then overlayed the original cubeman pose to complete the effect.
+		<p> I positioned my cubeman to mimic Leonardo Da Vinci's Vitruvian Man. I did this by first translating cubeman's arms and legs away from the body. I then rotated his arms and legs by 30 degrees, then translated them closer to his torso.
+			  Then to complete the effect I overlayed the original cubeman pose to complete the effect.
 		</p>
 		<h1>Task 4</h1>
 		<img src="../images/q4_tri.PNG">
@@ -52,11 +59,12 @@
 		<p> Test 7 with sample rate 1.
 		</p>
 		<h1>Task 5</h1>
-		<p> Pixel sampling is the method of mapping pixels to an underlying texture pixel(texel). This is done by calculating the uv vector for each pixel in the triangle, accomplished through barycentric interpolation.
-			  Each uv value is within the range [0,1] and when multiplied by width or height will describe which texel color should be used for the pixel.
+		<p> Pixel sampling is the method of mapping pixels to an underlying texture pixel(texel). This is done by calculating the uv vector for each pixel in the triangle, accomplished through barycentric interpolation. However instead of averaging together the colors of the vertices, the returned uv vector is the average of the uv values at the vertices.
+			  Each uv value is within the range [0,1] and when multiplied by width or height will map to a texel on the mipmap, describing which texel color should be used for the pixel.
 		</p>
-		<p> Nearest sampling returns the nearest texel to the value passed in by uv.
-		    Bilinear samplings takes the nearest 4 texels and performs 3 linear interpolations to "average" the colors between the texels.
+		<p> Nearest sampling returns the nearest texel to the value passed in by uv. This is accomplished by rounding the u and v value.
+		</p>
+		<p> Bilinear sampling takes the nearest 4 texels and performs 3 linear interpolations to "average" the colors between the texels. This is similar to interpolating over a square of texels. First the top and bottom texels are interpolated independently to return the top and bottom texels that are the interpolated average. Then the two texels are interpolated to return the final pixel color.
 		</p>
     <img src="../images/q5_n_1.PNG">
 		<p> Image with nearest sampling at 1 sample per pixel </p>
@@ -66,14 +74,17 @@
 		<p> Image with bilinear sampling at 1 sample per pixel </p>
 		<img src="../images/q5_b_16.PNG">
 		<p> Image with bilinear sampling at 16 samples per pixel </p>
-		<p> The switch between nearest and bilinear sampling shows a increase in the legibility of the white grid. In particular some of the lines that suffered from under-sampling appear more smooth and filled in.
-			  The jump to 16 pixel sampling dramatically benefits both nearest and bilinear sampling. The difference at 16 pixels between the two isn't very apparent apart from a slightly more gradual transition between colors in bilinear sampling.
+		<p> The switch between nearest and bilinear sampling shows a increase in the legibility of the white grid. This is because in the case of lines the surrounding pixels will either take the color of the line or the color of the background if we used nearest sampling. With bilinear sampling we can average the pixels and provide a smoother transition between the line and the background.
+		</p>
+	  <p> The jump to 16 pixel sampling dramatically benefits both nearest and bilinear sampling. However the difference between nearest and bilinear sampling isn't very apparent at 16 pixels apart from a slightly more gradual transition between colors in bilinear sampling.
 		</p>
 		<h1>Task 6</h1>
 		<p> Level sampling is a method of mapping pixels to texels in different mipmap levels. Each mipmap level is a lower resolution copy of the previous mipmap level, up to a certain threshold.
-			  Calculating the mipmap level is done by determining the amount of change(derivative) of u and v from the original pixel to a near subpixel. If the derivative is high then a higher mipmap level will be chosen and subsequently the texel chosen will be lower resolution.
-			  I implemented level sampling by calculating p_uv, p_dx_uv, and p_dy_uv by linearly interpolating between (x,y), (x + 1, y), and (x, y+ 1). After calculating the mipmap level, I pass the uv value and the level into either sample_nearest() or sample_bilinear().
-			  The main change to these two functions is that each value is scaled depending on the width and height of the mipmap level. This is done so the dimensions passed into the mipmap are not out of bounds.
+			  Calculating the mipmap level is done by determining the amount of change(derivative) of u and v from the original pixel to a near subpixel. If the derivative is high then a higher mipmap level will be chosen and subsequently the texel chosen will come from a lower resolution texel.
+    </p>
+		<p> I implemented level sampling by calculating p_uv, p_dx_uv, and p_dy_uv by linearly interpolating between (x,y), (x + 1, y), and (x, y + 1). After calculating the mipmap level, I passed the uv value and the level into either sample_nearest() or sample_bilinear().
+        The main change to these two functions is that each value is scaled depending on the width and height of the mipmap level. This is done so the dimensions passed into the mipmap are not out of bounds.
+				For bilinear level sampling I called the sample function twice, once on the lower mipmap level and once on the mipmap level + 1. Then I linearly interpolated between the colors to return the final pixel color.
 		</p>
 		<img src="../images/q6_base.PNG">
 		<p> Custom image with no super sampling, nearest pixel level, and nearest pixel sample. </p>
@@ -84,9 +95,10 @@
 		<img src="../images/q6_tri.PNG">
 		<p> Custom image with 16 samples per pixel, bilinear level interpolation, and bilinear sampling. </p>
 		<p> Increasing the number of samples per pixel will greatly increase the antialiasing power by increaing the sampling frequency. A downside is that supersampling uses much more memory and is slower as the rasterizer must first draw a higher resolution image then scale it down.
-			  Pixel sampling is similar to supersampling by averaging the nearest values, however it does not need to generate a higher resolution image. Thus it will be faster than supersampsling, albeit with less antialiasing power.
-				Level sampling uses more storage than pixel sampling as it requires more sublevels. It will use less processing power than pixel sampling.
 		</p>
-
+	  <p>Pixel sampling is similar to supersampling by averaging the nearest values however it does not need to generate a higher resolution image. Thus it will be faster than supersampsling, albeit with less antialiasing power.
+    </p>
+		<p>Level sampling uses more storage than pixel sampling as it requires access to more mipmap levels. Assuming an infinite amount of sublevels, this increase in storage will be 1.33x as large. Nearest level sampling will use the sample amount of processing power as pixel sampling, while bilinear level sampling will use twice as much processing power. This is because to implement bilinear level sampling the original sample function must be called twice.
+		</p>
 	</body>
 </html>
