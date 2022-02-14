@@ -3,6 +3,14 @@
 	</head>
 	<body>
 		<h1>Overview</h1>
+		<p> I implemented a rasterizer capable of rasterizing triangles in multiple ways. This rasterizer is able to rasterize triangles with a single color, triangles with multiple colors at the vertices, and triangles mapped to a texture file.
+		</p>
+		<p> The rasterizer is also versatile and is able to be set with different settings to achieve various final products. These settings include different pixel mapping and level mapping features, as well as a supersampling function. In addition these features can be combined to achieve a more anti-aliased product. For example using bilinear pixel and level sampling with 16 samples per pixel.
+		</p>
+		<p> I learned and reinforced multiple topics while completing this project. One item I learned was how to use the cross product of two vectors to determine the orientation of a triangle. Another was how to implement bilinear interpolation between levels by breaking the process down into three separate linear interpolations.
+		</p>
+		<p> I think the most valuable thing I learned was planning for future tasks while implementing the basic rasterizer. I realized that in order to add supersampling to the rasterizer I would need to keep items in the triangle rasterizer function clear and modular. It was also a great experience to learn how the rasterizer pipeline works and how each step in the process collaborates to produce the final image.
+		</p>
 		<h1>Task 1</h1>
 		<p> I rasterize triangles by first calculating information that determines the equations used.
 				The first item I calculate is the orientation of the points provided which is given by the cross product of the vectors (v2 - v0) and (v1 - v0). If the z value is negative then the triangle is clockwise, else it is counter clockwise.
