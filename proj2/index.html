@@ -2,6 +2,176 @@
 	<head>
 	</head>
 	<body>
-		Project 2 here
+		<h1>Overview</h1>
+		<h1>Task 1</h1>
+			<p>De Casteljau's algorithm is the process by which multiple points are evaluated to produce a final point that lies on the corresponding Bezier curve.
+				It does so by recursively linearly interpolating between the points p(1) - p(n), producing the vector p(1)' - p(n-1)'.
+				In the final iteration a point on the Bezier curve is returned.</p>
+			<p>I implemented de Casteljau's algorithm by looping through the points provided, linearly interpolating between the point and the next point using the parameter t.
+				I then pushed these linear interpolations onto a return vector, which consisted of a vector of points with size = original vector.size() - 1.
+				Finally if there is only one point provided, I return that point. </p>
+		<figure>
+			<img src="../images/proj2/q1_1.png">
+			<figcaption>First iteration of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_2.png">
+			<figcaption>Second iteration of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_3.png">
+			<figcaption>Third iteration of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_4.png">
+			<figcaption>Fourth iteration of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_5.png">
+			<figcaption>Final point of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_6.png">
+			<figcaption>Bezier curve of de Casteljau's algorithm with custom curve.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q1_7.png">
+			<figcaption>Bezier curve with modified points.</figcaption>
+		</figure>
+		<p>Changing the parameter t lets us view different points lying on the final Bezier curve.
+			With a smaller t value the final returned point is closer to the start of the curve, a larger t value returns a point near the end of the curve.
+		<figure>
+			<img src="../images/proj2/q1_8.png">
+			<figcaption>Bezier curve with different parameter t.</figcaption>
+		</figure>
+		<h1>Task 2</h1>
+			<p>De Casteljau's algorithm extends to Bezier sufaces through evaluation in two steps.
+				The first step is to perform the standard algorithm over the vertical lines in the surface(the rows of the 2D matrix).
+				Looping through this lines will return a set of points that comprise a horizontal curve on the surface.
+				Applying de Casteljau's algorithm to this set of points will return a point lying on the Bezier surface.
+			<p>I implemented this algorithm by using the three functions provided. In evaluateStep() the function is similar to the 1D algorithm,
+				returning a vector of points linearly interpolated using the given points and the parameter t.
+				Evaluate1D() is used as a helper function that passes in the points assigned by evaluate(), and returns a final point lying on the Bezier curve.
+				Evaluate() first loops through each row of the 2D matrix and calls evaluate1D() on the row. The parameter u is used to linearly interpolate.
+				Each of the points returned by this loop is pushed onto a vector of final points. I then call evaluate1D() on this vector, returning the final point on the Bezier surface.</p>
+		<figure>
+			<img src="../images/proj2/q2.png">
+			<figcaption>Teapot bezier surface.</figcaption>
+		</figure>
+		<h1>Task 3</h1>
+			<p>I implemented area-weighted vertex normals by first setting 2 counters, a Vector3D sum and the intiial halfedge.
+				The Vector3D sum is used to keep track of the summed cross product of each neighbouring triangle.
+				I then traversed through the mesh using the initial halfedge as a stopping condition.
+			</p>
+			<p>On each cycle I used halfedge traversal to determine the three points that comprised the neighbouring triangle.
+				I then calculated two vectors v1 = p2 - p1 and v0 = p1 - p0. I normalized the cross product of these vectors(cross(v0,v1) / cross(v0,v1).norm()) and added the result to the running sum.
+				Finally I normalized the sum by setting it equal to sum / sum.norm() and returned it.</p>
+		<figure>
+			<img src="../images/proj2/q3_1.png">
+			<figcaption>Teapot mesh with flat shading.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q3_2.png">
+			<figcaption>Teapot mesh with Phong shading.</figcaption>
+		</figure>
+		<h1>Task 4</h1>
+			<p>I implemented edge flips by first checking if the edge is a boundary edge. If it is I return immediately.
+				Else, I label each of the components in the two triangles. These are the 10 halfedges, 4 vertices, 2 faces, and 5 edges.
+				After obtaining this information I set each of the vertices, faces, and edges to a corresponding halfedge.
+				Finally I set the halfedge's neighbors according to the diagram below.</p>
+			<p>The halfedges on the outside of the two triangles do not have their next halfedge and face change, so I set their parameters equal to h->next() and h->face().</p>
+			<p>I didn't encounter any significant bugs while implementing this function. The hardest part of flipping correctly was ensuring that each component in the triangles are set properly.
+				Sketching the two triangles and listing the components before and after the flip helped with visualizing the problem.</p>
+		<figure>
+			<img src="../images/proj2/q4_1.png">
+			<figcaption>Teapot mesh before edge flips.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj2/q4.png">
+			<figcaption>Teapot mesh after edge flips.</figcaption>
+		</figure>
+		<h1>Task 5</h1>
+			<p>I implemented edge splits similarly to edge flips. First I gathered information about the existing faces, edges, etc.
+				I then defined the new components created by an edge split. These were the 6 new halfedges, 3 edges, 2 faces, and 1 vertex.</p>
+			<p>I then calculated the position of the new vertex by taking the average of the two vertex positions lying on the edge provided.
+				Finally I assigned the new values to each object according to the diagram below.</p>
+			<p>I also did not experience any major roadblocks while implementing edge splits.
+				Drawing the triangles before and after the split helped tremendously in cataloging each component and ensuring the correct halfedge/neighbour was assigned.</p>
+			<figure>
+				<img src="../images/proj2/q4_1.png">
+				<figcaption>Teapot mesh before edge splits.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q5_1.png">
+				<figcaption>Teapot mesh after edge splits.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q5_2.png">
+				<figcaption>Teapot mesh after edge splits and edge flips.</figcaption>
+			</figure>
+    <h1>Task 6</h1>
+			<p>To implement loop subdivision, first I looped through the existing edges to calculate the vertex position for each edge.
+				I also assigned each edge's isNew boolean to false. I then looped through the vertices and calculated the new position for each vertex.
+				These values were assigned to the edge/vertex newPosition.
+				I also set each existing vertex isNew boolean to false.</p>
+			<p>I then split each edge, making sure to assign isNew to true for each new edge. I also assigned isOriginal for the two edges that were in the original mesh.
+				I flipped the edges that had isNew set to true and isOriginal set to false.
+				Finally I looped through all the vertices and assigned their position to newPosition.</p>
+			<p>A significant trick I used while implementing this function was adding a boolean to the edge class: isOriginal.
+				I added this boolean because while isNew can keep track of the edges generated by each call to edgeSplit(),
+				it does not keep track of whether or not that edge comprised the original mesh's structure.
+				This extra information was helpful while calling edgeSplit() and edgeFlip(). In edgeSplit() I could make sure the current edge is not new,
+				and in edgeFlip() I could check to see if the edge is part of the original mesh or not.</p>
+			<p>After multiple loop subdivisions the general shape of the object remains the same.
+				This is because averaging the nearby vertices to determine the new vertex's position allows the mesh to retain its original shape.
+				Averaging these vertices also causes sharp edges to "round" as shown by the torus after two upsamples.
+			  The rounding is caused by the linear interpolations, similar to how the final Bezier curve is returned.
+				The only difference is that each upsampling undergoes only one iteration of de Casteljau's algorithm</p>
+			<figure>
+				<img src="../images/proj2/q6_1.png">
+				<figcaption>Torus mesh before upsampling.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q6_2.png">
+				<figcaption>Torus mesh after upsampling.</figcaption>
+			</figure>
+			<p>To shape out the irregularities in the cube afer loop subdivison I first split each side so that it would have 4 triangles in an "X" formation.
+				After upsampling the irregularities in the cube were less noticable, more akin to a sphere.
+				I think the pre-splitting helped guide the upsampling towards a regular object.
+				In the original cube there is not much information to use during each upsampling. In addition each side of the cube is not symmetric and is split in an alternating fashion.
+				Pre-splitting the cube caused it to be symmetric, meaning each new vertex used nearby positions that were equidistant.</p>
+			<figure>
+				<img src="../images/proj2/q6_3.png">
+				<figcaption>Cube mesh before upsampling with no pre-split edges.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q6_4.png">
+				<figcaption>Cube mesh after upsampling with no pre-split edges.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q6_5.png">
+				<figcaption>Cube mesh before upsampling with pre-split edges.</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/q6_6.png">
+				<figcaption>Cube mesh after upsampling with pre-split edges.</figcaption>
+			</figure>
+			<p>I experiences some significant bugs while implementing loop subdivision.</p>
+			<p>One bug I encountered caused each vertex to disappear, with the edges all pointing to the origin.
+				This was caused while calculating the new vertex position. In my vertex formula I included the division (1/8) and (3/8),
+				but for some reason my compiler treated the result as an integer, rounding down the result to zero.
+				I solved this bug by explicitly casting the divisions to a float type.</p>
+			<p>Another bug I encountered was the upsampling forming a strange shape after the second iteration.
+				This was due to me forgetting to reset the isNew values in the first edge loop to false, causing each iteration after the first to ignore parts of the mesh.
+				Setting isNew in the edge loop resolved this bug.</p>
+			<figure>
+				<img src="../images/proj2/error.png">
+				<figcaption>Bug that caused each vertex to equal (0,0,0).</figcaption>
+			</figure>
+			<figure>
+				<img src="../images/proj2/error2.png">
+				<figcaption>Cube mesh with upsampling bug.</figcaption>
+			</figure>
+
 	</body>
 </html>
