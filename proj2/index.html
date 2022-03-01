@@ -3,13 +3,19 @@
 	</head>
 	<body>
 		<h1>Overview</h1>
+		<p>In this assignment I implemented multiple functions that handled mesh representation. These algorithms included de Casteljau's algorithm for Bezier curves and surfaces,
+		vertex weighted normals for mesh shading, edge flips and splits, and mesh upsampling. Each of these functions built upon the previous function, culminating in a final
+	  upsampling feature capable of producing fine mesh objects such as a torus or sphere.</p>
+		<p>I learned multiple concepts while working on this assignment. Being able to visualize how changing the parameter t affected the final point on the Bezier curve
+		 helped me understand the math behind Bezier curves. I also learned a lot while implementing the edge split and flip functions. Having to draw the assignments by hand
+	   reinforced my understanding of how halfedge traversal is used in a practical manner.</p>
 		<h1>Task 1</h1>
 			<p>De Casteljau's algorithm is the process by which multiple points are evaluated to produce a final point that lies on the corresponding Bezier curve.
 				It does so by recursively linearly interpolating between the points p(1) - p(n), producing the vector p(1)' - p(n-1)'.
 				In the final iteration a point on the Bezier curve is returned.</p>
 			<p>I implemented de Casteljau's algorithm by looping through the points provided, linearly interpolating between the point and the next point using the parameter t.
 				I then pushed these linear interpolations onto a return vector, which consisted of a vector of points with size = original vector.size() - 1.
-				Finally if there is only one point provided, I return that point. </p>
+				Finally if there is only one point provided I return that point. </p>
 		<figure>
 			<img src="../images/proj2/q1_1.png">
 			<figcaption>First iteration of de Casteljau's algorithm with custom curve.</figcaption>
@@ -47,8 +53,8 @@
 		<h1>Task 2</h1>
 			<p>De Casteljau's algorithm extends to Bezier sufaces through evaluation in two steps.
 				The first step is to perform the standard algorithm over the vertical lines in the surface(the rows of the 2D matrix).
-				Looping through this lines will return a set of points that comprise a horizontal curve on the surface.
-				Applying de Casteljau's algorithm to this set of points will return a point lying on the Bezier surface.
+				Looping through these lines will return a set of points that comprise a horizontal curve on the surface.
+				Applying de Casteljau's algorithm to this final set of points will return a point lying on the Bezier surface.
 			<p>I implemented this algorithm by using the three functions provided. In evaluateStep() the function is similar to the 1D algorithm,
 				returning a vector of points linearly interpolated using the given points and the parameter t.
 				Evaluate1D() is used as a helper function that passes in the points assigned by evaluate(), and returns a final point lying on the Bezier curve.
@@ -79,8 +85,12 @@
 				Else, I label each of the components in the two triangles. These are the 10 halfedges, 4 vertices, 2 faces, and 5 edges.
 				After obtaining this information I set each of the vertices, faces, and edges to a corresponding halfedge.
 				Finally I set the halfedge's neighbors according to the diagram below.</p>
+			<figure>
+				<img src="../images/proj2/flip.png">
+				<figcaption>Diagram labeling the elements of the triangle before and after an edge flip.</figcaption>
+			</figure>
 			<p>The halfedges on the outside of the two triangles do not have their next halfedge and face change, so I set their parameters equal to h->next() and h->face().</p>
-			<p>I didn't encounter any significant bugs while implementing this function. The hardest part of flipping correctly was ensuring that each component in the triangles are set properly.
+			<p>I didn't encounter any significant bugs while implementing this function. The hardest part of flipping correctly was ensuring that each component in the triangles were set properly.
 				Sketching the two triangles and listing the components before and after the flip helped with visualizing the problem.</p>
 		<figure>
 			<img src="../images/proj2/q4_1.png">
@@ -95,6 +105,10 @@
 				I then defined the new components created by an edge split. These were the 6 new halfedges, 3 edges, 2 faces, and 1 vertex.</p>
 			<p>I then calculated the position of the new vertex by taking the average of the two vertex positions lying on the edge provided.
 				Finally I assigned the new values to each object according to the diagram below.</p>
+			<figure>
+				<img src="../images/proj2/flip.png">
+				<figcaption>Diagram labeling the elements of the triangle before and after an edge split.</figcaption>
+			</figure>
 			<p>I also did not experience any major roadblocks while implementing edge splits.
 				Drawing the triangles before and after the split helped tremendously in cataloging each component and ensuring the correct halfedge/neighbour was assigned.</p>
 			<figure>
@@ -156,7 +170,7 @@
 				<img src="../images/proj2/q6_6.png">
 				<figcaption>Cube mesh after upsampling with pre-split edges.</figcaption>
 			</figure>
-			<p>I experiences some significant bugs while implementing loop subdivision.</p>
+			<p>I experienced some significant bugs while implementing loop subdivision.</p>
 			<p>One bug I encountered caused each vertex to disappear, with the edges all pointing to the origin.
 				This was caused while calculating the new vertex position. In my vertex formula I included the division (1/8) and (3/8),
 				but for some reason my compiler treated the result as an integer, rounding down the result to zero.
@@ -172,6 +186,5 @@
 				<img src="../images/proj2/error2.png">
 				<figcaption>Cube mesh with upsampling bug.</figcaption>
 			</figure>
-
 	</body>
 </html>
