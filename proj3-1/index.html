@@ -2,6 +2,203 @@
 	<head>
 	</head>
 	<body>
-		Project 3-1 here
+				<h1>Overview</h1>
+				<p>In this project I implemented a basic raytracer capable of rendering complex objects with direct and indirect lighting, sped up using BVH acceleration and adaptive sampling. Currently the raytracer is only capable of detecting intersections with spheres and triangles, however it can be further modified to include other primitives and more robust lighting situations.</p>
+				<p>I approached each part with the intention of understanding how future parts would be affected by my implementation of the current section. If I failed to implement a task properly I knew that it would affect other tasks, so I first ensured that my implementations were completely correct before proceeding.</p>
+				<h1>Task 1</h1>
+				<p>To generate the rays I first had to translate the x and y coordinates from image space to camera space. To do so I scaled the x coordinate by 2 * tan(.5 * HFov), and the y coordinate by 2 * tan(.5 * vFov), both in radians. However because the camera is centered around the z axis, I also had to subtract a constant equal to tan(.5 * HFov). Then I assigned a 3D vector to these x and y coordinates with z = -1, normalized the vector, projected it into world space using c2w, and used this vector as the direction for the returned ray.</p>
+				<p>To calculate the illuminance value for each pixel I summed over the illumination returned by est_radiance_global_illumination for num_samples, then scaled it by (1 / num_samples).</p>
+				<p>At this stage est_radiance_global_illumination calls the bvh intersect function, which in turn calls the two primitive intersection functions.</p>
+				<p>I used the Moller Trumbore algorithm for triangle intersections. The final returned vector from this algorithm consists of the time at which the intersection occurs and the beta and gamma values at this intersection. I also checked to see if the dot product of the ray direction and the normal of the surface is equal to zero. If it is then the ray is parallel to the surface, and I return false.</p>
+				<p>There are also two additional checks to ensure that the ray intersects the triangle within the time given. If the time returned is outside the bounds of min_t or max_t the function returns false. In addition if any of the barycentric values are less than zero the function returns false.</p>
+				<p>Finally I assigned the bsdf, time, primitive, and normal values to the intersection and reassigned r.max_t to the time value found.</p>
+				<p>Troubleshooting</p>
+				<p>I found the most difficult concept while implementing part 1 was understanding how to translate the object coordinates to world space. It took me multiple attempts to sketch out and visualize the proper conversion. An additional part that gave me trouble was implementing the triangle intersection. At first I attempted to use the three-line test from Project 1, but modifying the code to include 3D triangles proved difficult. The Moller Trumbore algorithm helped tremendously and is more efficient.</p>
+				<figure>
+					<img src="../images/proj3/part_1_spheres.png">
+					<figcaption>CBspheres with normal shading.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_1_gems.png">
+					<figcaption>CBgems with normal shading.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_1_gems.png">
+					<figcaption>CBempty with normal shading.</figcaption>
+				</figure>
+				<h1>Task 2</h1>
+				<p>My BVH construction algorithm chooses the splitting point based on the axis with the longest length. To determine this axis I union the existing primitive bounding boxes and find the min and max of x, y, and z. Then I subtract these values and choose the axis with the longest length. The actual split point is calculated by averaging the centroids of the primitives’ bounding boxes along the determined axis.</p>
+				<p>The splitting is accomplished by calling std::partition on the start and end iterators given. Std::partition sorts the primitives in the vector based on an input function where all primitives who returned true are in the first half of the vector, and all primitives who returned false are in the second half. I provided a lambda function to std::partition that checks if the primitives’ centroid is less than the split point calculated.</p>
+				<p>To perform the recursive call I call construct_bvh on each half of the sorted primitive vector, assigning each construct_bvh call to node-l and node->r. The base case to the function is if the size of the primitive vector is less than max_leaf_size, or if all of the primitives in the sorted vector are on one side of the average location.</p>
+				<figure>
+					<img src="../images/proj3/part_2_planck.png">
+					<figcaption>Max Planck with normal shading.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_2_beast.png">
+					<figcaption>Beast with normal shading.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_2_lucy.png">
+					<figcaption>CBlucy with normal shading.</figcaption>
+				</figure>
+				<p>Rendering times at 800 X 600 resolution, normal shading, and one thread.</p>
+				<p>Cow rendering time no bvh: 97.6456s, 5856 primitives</p>
+				<p>Cow rendering time with bvh: .7331s</p>
+				<p>Beetle rendering time no bvh: 141.5278s, 7558 primitives</p>
+				<p>Beetle rendering time with bvh: .5294s</p>
+				<p>Teapot rendering time no bvh: 34.9372s, 2464 primitives</p>
+				<p>Teapot rendering time with bvh: .4493s</p>
+				<p>Without BVH acceleration each rendering of medium complex geometries takes around 1 - 2 minutes. With the three files tested the average render takes about (97.6 + 141.5 + 34.9) / (5856 + 7558 + 2464) = .0172 seconds per primitive. This is because the naive implementation has to loop through each primitive and determine if it intersects the ray. BVH acceleration vastly improves the rendering time, there is a 13219.5% speedup while rendering the cow mesh. This is because we can exit the intersect function early if the ray does not intersect the bounding box of a group of primitives, allowing us to disregard most of the primitives in the mesh.</p>
+				<figure>
+					<img src="../images/proj3/part_2_cow_bvh.png">
+					<figcaption>Cow with normal shading</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_2_beetle_bvh.png">
+					<figcaption>Beetle with normal shading.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_2_teapot_bvh.png">
+					<figcaption>Teapot with normal shading.</figcaption>
+				</figure>
+				<h1>Task 3</h1>
+				<p>In my hemisphere lighting function I loop num_sample times, summing the radiance in the direction coming from the unit hemisphere. To do so I cast a ray in the random hemisphere direction translated to world space. The min_t of the ray is EPS_F, and the max_t of the ray is infinity. </p>
+				<p>Then I found the reflectance of the intersection by using sample_f, and the cos of the angle between the normal and the ray direction by taking the dot product of the new ray direction and the normal. I only add the radiance calculated if the new ray intersects an object in the bvh. Finally I normalize the radiance sum by (1 / num_samples).</p>
+				<p>In my importance lighting function I loop through the lights in the scene. Then for the amount of light rays defined I find the direction between the hit point and the light using sample_L. I then define a new ray using the direction to the light as the ray direction. Because we are not concerned with the light’s emission if it is behind another object in the bvh, I only add the light’s radiance to the radiance sum if there is not an intersection between the point and the light. This is done by setting the ray’s min_t to EPS_F, and the max_t to distToLight - EPS_F.</p>
+				<figure>
+					<img src="../images/proj3/part_3_spheres_64_32_H.png">
+					<figcaption>CBspheres with hemisphere sampling, 64 samples per pixel, 32 samples per light.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_3_lucy_64_32.png">
+					<figcaption>CBlucy with importance sampling, 64 samples per pixel, 32 samples per light.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_3_dragon_64_32.png">
+					<figcaption>Dragon with importance sampling, 64 samples per pixel, 32 samples per light.</figcaption>
+				</figure>
+				<p>Uniform hemisphere sampling tends to have more noise as there is no guarantee that the ray cast from the hit point will hit a light. Therefore with a smaller amount of samples there is an increasing probability that a pixel that would normally be illuminated could have a radiance value of 0. Importance sampling solves this issue by only checking between the hit point and the lights in the scene, meaning that less samples are needed to converge to the final value. Importance sampling also leads to a more efficient method of rendering, as we can disregard many of the rays that would be cast using a uniform hemisphere.</p>
+				<figure>
+					<img src="../images/proj3/part_3_bunny_1_1.png">
+					<figcaption>CBbunny with importance sampling, 1 sample per pixel, 1 sample per light.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_3_bunny_1_4.png">
+					<figcaption>CBbunny with importance sampling, 1 sample per pixel, 4 samples per light.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_3_bunny_1_16.png">
+					<figcaption>CBbunny with importance sampling, 1 sample per pixel, 16 samples per light.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part_3_bunny_1_64.png">
+					<figcaption>CBbunny with importance sampling, 1 sample per pixel, 64 samples per light.</figcaption>
+				</figure>
+				<p>Increasing the amount of light rays in the scene leads to a reduction in the noise of the image, especially in the shadows of the bunny. With 1 light ray there is a significant part of the scene that lies behind the point of light. There is no opportunity for the pixel’s value to converge to the true value. Because of this the shadows of the bunny appear as individual black pixels, and not a uniform shadow.</p>
+				<p>With light rays = 16 the shadows on the walls and beneath the bunny become more gradual and realistic. The pixels are able to average the values from different points in the area light instead of treating the light source as a point light. However even with light rays = 64, the shadow beneath the bunny still has noticeable individual black pixels. This effect remains due to some pixels lying behind all points on the light and are unable to be illuminated with direct lighting.</p>
+				<h1>Task 4</h1>
+				<p>My indirect lighting function operates by recursively calling itself, stopping if the function has reached the max depth value given or terminates based on a probability function.</p>
+				<p>In at_least_one_bounce_radiance(), I first call one_bounce_radiance using the provided ray and intersection. This call is necessary to find the radiance value cast onto the object from either a light source or the next object hit by this ray.</p>
+				<p>Then I create an object ray that travels from the hit point to the next object, the direction given by bsdf->sample_f. The max_t is infinity, and the min_t is EPS_F to avoid floating point errors. I also set this ray’s depth to be the current ray’s depth - 1.</p>
+				<p>I then call bvh->intersect on this ray. If there is no intersection then we can assume the ray will never hit another object, and we can terminate the recursion. Else, I first check to see if this is the first call to at_least_one_bounce_radiance(), i.e. if the object_ray’s depth is equal to max_ray_depth - 1, and if max_ray_depth is greater than 1. This is because we want to have at least one indirect light call, regardless of the result of russian roulette.</p>
+				<p>If it isn’t the first recursive call then I check if the object_ray’s depth is greater than 0, and if the result of the coin flip is true. If it is, we continue the recursion.</p>
+				<p>To utilize indirect lighting I replaced the call to one_bounce_radiance() with at_least_one_bounce_radiance() in est_radiance_global_illumination(). The other check, if the intersection point hits a light, remains the same.</p>
+				<figure>
+					<img src="../images/proj3/part4_spheres_1024_4_5.png">
+					<figcaption>CBspheres with global illumination, 1024 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_gems_1024_4_5.png">
+					<figcaption>CBgems with global illumination, 1024 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_spheres_direct_1024_4_5.png">
+					<figcaption>CBspheres with only direct lighting, 1024 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_spheres_indirect_1024_4_5.png">
+					<figcaption>CBspheres with only indirect lighting, 1024 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<p>With only direct illuminance the final result is the same as calling only one_bounce_radiance(). This is because we are only concerned if the ray hits the light after bouncing off the object. Thus any pixel in the scene that is behind an object will not be illuminated and remain black.</p>
+				<p>With only indirect illuminance the final result has objects that are illuminated from only the bottom, with the top of the object remaining relatively dark. This is because the top’s of the objects are illuminated with direct lighting which I removed. The only light source in this image comes from the reflection of the light onto another primitive in the scene. Combining these two images will result in an image with proper direct and indirect lighting.</p>
+				<figure>
+					<img src="../images/proj3/part4_bunny_1024_1_0.png">
+					<figcaption>CBbunny with global illumination, 1024 samples per pixel, 1 samples per light, 0 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_bunny_1024_1_1.png">
+					<figcaption>CBbunny with global illumination, 1024 samples per pixel, 1 samples per light, 1 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_bunny_1024_1_2.png">
+					<figcaption>CBbunny with global illumination, 1024 samples per pixel, 1 samples per light, 2 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_bunny_1024_1_3.png">
+					<figcaption>CBbunny with global illumination, 1024 samples per pixel, 1 samples per light, 3 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_bunny_1024_1_100.png">
+					<figcaption>CBbunny with global illumination, 1024 samples per pixel, 1 samples per light, 100 ray depth.</figcaption>
+				</figure>
+				<p>Assigning max_ray_depth = 0 to CBbunny returns an image with only the light visible. This is because with depth = 0 this is the same as calling zero_bounce_radiance, which only returns a non-zero illuminance if the object intersected is a light source.</p>
+				<p>With depth = 1 CBbunny returns an image that is the same as one_bounce_radiance. The bottom of the bunny is very dark, and the top of the room is completely black.</p>
+				<p>With depth = 2 we activate indirect illuminance, and the final result is a room with less pronounced shadows and a visible ceiling. There are still shadows on the bottom of the bunny however it is much lighter because we take into account the light reflected from the ground to the bottom of the bunny. The ceiling is also illuminated from the light cast from other objects in the scene.</p>
+				<p>The final results when depth = 3 and depth = 100 are very similar. There is less noise compared to depth = 2 as we are able to average over more of the lights, reducing the chance that a section of the image is either too bright or too dark. However the addition of a termination probability means that the chance that a ray hits all 100 surfaces is very small. While running the programs with depth = 100 I noticed most lights terminated after hitting 3 - 4 surfaces. This means that increasing the depth past a certain point leads to diminishing returns.</p>
+				<figure>
+					<img src="../images/proj3/part4_blob_1_4_5.png">
+					<figcaption>Blob with global illumination, 1 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_2_4_5.png">
+					<figcaption>Blob with global illumination, 2 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_4_4_5.png">
+					<figcaption>Blob with global illumination, 4 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_8_4_5.png">
+					<figcaption>Blob with global illumination, 8 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_16_4_5.png">
+					<figcaption>Blob with global illumination, 16 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_64_4_5.png">
+					<figcaption>Blob with global illumination, 64 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part4_blob_1024_4_5.png">
+					<figcaption>Blob with global illumination, 1024 samples per pixel, 4 samples per light, 5 ray depth.</figcaption>
+				</figure>
+				<p>The main effect by increasing the amount of samples per pixel is a decrease of the noise in the final result.</p>
+				<p>With samples per pixel = 1, 2, 4, and 8, there is a significant amount of noise in the blob. This is because each pixel is only able to take into account a small amount of light rays, increasing the variance between each pixel. This effect is highlighted in the blob with samples per pixel = 1, where the blob retains a grainy effect with some pixels becoming completely black and others having the correct light value.</p>
+				<p>With samples per pixel = 16, 64, and 1024, the final image becomes radically more sharp and clear. Even at 16 samples per pixel there is a grainy effect which is completely removed with 64 samples. 16 samples is not enough to converge to a final value.</p>
+				<p>There is a difference between the 64 and 1024 sample images, with the 1024 samples returning a blob that is smoothly lighted. However the difference between the two is less noticeable than the difference between 1 and 8. This is because the final pixel value has already converged, and the addition of more samples does not impact the final image that much.</p>
+				<h1>Task 5</h1>
+				<p>I implemented adaptive sampling by checking the standard deviation of the illuminance to see if the pixel has converged on a value. First I defined multiple doubles, these are the s1, s2, mean, standard_deviation, and I values. I also included a counter, number_of_samples, to determine when to check if the pixel had converged.</p>
+				<p>Then I summed s1 and s2, using illum() and illum() ^ 2 respectively. Then for every samplesPerBatch samples I check if I <= sqrt(standard_deviation) / sqrt(number_of_samples). If it is, I break out of the sampling loop and divide the total illuminance by number_of_samples.</p>
+				<figure>
+					<img src="../images/proj3/part5_spheres_2048_1_10_32.png">
+					<figcaption>CBspheres with adaptive sampling and global illumination, 2048 samples per pixel, 1 samples per light, 10 ray depth, 32 samples per batch, .05 tolerance.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part5_spheres_2048_1_10_32_rate.png">
+					<figcaption>CBspheres rate with adaptive sampling and global illumination, 2048 samples per pixel, 1 samples per light, 10 ray depth, 32 samples per batch, .05 tolerance.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part5_bunny_2048_1_10_32.png">
+					<figcaption>CBbunny with adaptive sampling and global illumination, 2048 samples per pixel, 1 samples per light, 10 ray depth, 32 samples per batch, .05 tolerance.</figcaption>
+				</figure>
+				<figure>
+					<img src="../images/proj3/part5_bunny_2048_1_10_32_rate.png">
+					<figcaption>CBbunny rate with adaptive sampling and global illumination, 2048 samples per pixel, 1 samples per light, 10 ray depth, 32 samples per batch, .05 tolerance.</figcaption>
+				</figure>
+				<p>Adaptive sampling increases the performance of the raytracer without sacrificing image quality. This is because for pixels that are not changing much from sample to sample, we can safely exit the loop without adding any noise. This increase in performance can be seen with the time to render the spheres_lambertian image with 1024 samples per pixel, 4 light rays, and depth = 5. Without adaptive sampling it took 205 seconds to render, with adaptive sampling it took 115 seconds.</p>
+				<p>The image rate shows that the top of a primitive and the sides and floor of the scene are quick to converge. This is because these areas are mainly illuminated using direct lighting, meaning we don’t rely too much on lighting from surrounding objects.</p>
+				<p>The areas with the longest time to converge are the shadows of the sphere and the ceiling surrounding the light. This area is solely illuminated from indirect sources, meaning it is not dominated by one_bounce_lighting and needs more samples to converge.</p>
 	</body>
 </html>
