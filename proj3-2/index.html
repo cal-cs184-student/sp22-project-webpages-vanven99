@@ -2,6 +2,95 @@
 	<head>
 	</head>
 	<body>
-		Project 3-2 here
+		<h1>Overview</h1>
+		<p>In this project I expanded on the raytracer implemented from Assignment 3-1, adding the ability to raytrace surfaces with microfacet BSDFs and a camera lens function. Both of these settings are customizable, allowing the user to change the properties of the final image. These properties include the focal distance and lens radius, and the roughness and refraction indices of primitives.</p>
+		<p>I approached each part by closely following the spec and using debugging methods when a returned image was not correct. For example, when calculating the reflected ray w_i across the sampled microfacet h I used a 3D vector grapher to visualize the rays returned. This helped with identifying the correct transformation used to modify w_so to return the correct w_i.</p>
+		<p>My approach to part 4 was very similar to part 2, by following the spec the correct effect was returned.</p>
+		<p>A significant problem I encountered was the appearance of black pixels when rendering microfacet bsdfs. I discovered this issue to be related to an incorrect incident vector being returned as traveling inside the primitive as opposed to reflecting off the surface. This issue was fixed by using an accurate reflection equation.</p>
+		<p>However even after fixing this issue I noticed black pixels scattered inside the scene. This was resolved by ensuring that the wo and wi vectors were valid and did not return a dot product with n less than zero.</p>
+		<h1>Task 2: Microfacet Materials</h1>
+		<p>For the first 3 tasks, I implemented each function by using the equations given in the spec. In task 2 I realized that I would need to calculate the vector h given wo and wi, which is accomplished by adding wi and wo.</p>
+		<p>Task 4 was more complicated as I needed to calculate the h and wi vectors using vector math. To obtain the h vector I computed each x, y, and z component through a polar to cartesian coordinate transform. Then for the reflected wi vector I used the equation wi = 2 * dot(wo, h) * h - wo.</p>
+		<figure>
+			<img src="../images/proj4/part2_dragon_256_1_5_005.png">
+			<figcaption>CBDragon with gold BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, alpha = .005, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part2_dragon_256_1_5_05.png">
+			<figcaption>CBDragon with gold BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, alpha = .05, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part2_dragon_256_1_5_25.png">
+			<figcaption>CBDragon with gold BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, alpha = .25, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part2_dragon_256_1_5_5.png">
+			<figcaption>CBDragon with gold BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, alpha = .5, importance sampling.</figcaption>
+		</figure>
+		<p>Changing the alpha value affects the roughness of the material being rendered. A lower alpha value corresponds to a material with very little roughness, which is seen in the image with alpha = .005. At this low level of roughness the dragon is very shiny and you can see the reflection of surrounding objects on the surface. Higher alpha values cause the dragon to adopt a tighter bsdf, leading to a glossier material.</p>
+		<p>Lowering the alpha value also had the effect of dimming the overall color of the primitive. With alpha = .005 the dragon is dark and does not return a scene with the proper colors. This is because the alpha value affects the pdf of theta and the ndf of the microfacet normals. Smaller alpha values cause the pdf and ndf to widen their range, meaning that the rangle of sampled vectors is much greater and takes in a greater portion of the surrounding scene. By increasing the alpha value the pdf and ndf shrink, causing the sampled pixels on the dragon to use a smaller range of sampled vectors. This led to a glossier dragon with distinct bright and dim locations.</p>
+		<figure>
+			<img src="../images/proj4/part2_bunny_256_1_5_hemi.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, hemisphere sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part2_bunny_256_1_5_imp.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, importance sampling.</figcaption>
+		</figure>
+		<p>Using cosine hemisphere sampling caused the bunny to have a much lighter underside with more contrast between regions of the bunny. In addition the sides of the bunny also captured much more of the color projected by the red and blue walls, leading to areas of the primitive having bright blue and red spots. In contrast, importance sampling leads to a more realistic metal surface, with the bunny having much more gradual differences in color and brightness.</p>
+		<p>I believe this difference can be attributed to a similar effect seen in changing the alpha values in the section above. Since cosine sampling is uniform along the hemisphere, each sampled pixel will use a larger area of the surrounding scene. Thus there are greater differences in different regions of the bunny.</p>
+		<p>Importance sampling escapes this issue by using the microfacet material to determine how much of the scene should be used when sampling. Cosine sampling would be more useful when rendering a primitive with a diffuse bsdf, such as plastic or wood.</p>
+		<figure>
+			<img src="../images/proj4/part2_bunny_256_1_5_nickel.png">
+			<figcaption>CBBunny with nickel BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, importance sampling.</figcaption>
+		</figure>
+		<p>I used a nickel microfacet bsdf to render the bunny. The eta values used are 1.9874, 1.9200, 1.7675, and the k values are 4.0011, 3.6100, and 3.0550 for the red, green and blue wavelengths respectively. The end result is a bunny with a uniform silver tone, opposed to the copper tone in the original bunny.</p>
+		<h1>Task 4: Depth of Field</h1>
+		<p>I implemented the camera lens by following the ray diagram listed in the spec. I think the most difficult section to implement was understanding how to find the final point that lies on the plane of focus. I was able to find this point by using the bounding box intersection formula, checking to see when the ray from the image plane intersects the plane of focus then calculating the point on the plane. This allowed me to determine the ray projected from the sample on the lens to the point in focus.</p>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_500_200.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .500, focal distance = 2.00, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_500_456.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .500, focal distance = 4.56, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_500_556.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .500, focal distance = 5.56, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_500_700.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .500, focal distance = 7.00, importance sampling.</figcaption>
+		</figure>
+		<p>In a pinhole camera model the final result captured on the image plane is an inverted image of the scene. This is because each pixel on the primitive can only be traced once through the pinhole onto a specific point onto the image plane with all other rays failing to pass through this point. With the pinhole camera all parts of a scene are in focus and remain unblurred, however this also means the light in the scene is uniform and cannot be focused.</p>
+		<p>The thin-lens camera model more closely resembles a real life camera by placing a thin lens in front of the image plane, causing the scene to have a distinct plane of focus. In effect this is increasing the radius of the pinhole to larger than a singular point, causing parts of the image to be blurred and other parts to be in focus. This is because decreasing the focal length between the camera sensor and the image plane increases the FOV of the image.</p>
+		<p>With the lens placed at distance = 2.00, the entire scene is out of focus and the bunny is not visible. This is because while there still remain rays that can detect the bunny, they are averaged by other rays that hit the scene using a random distribution.</p>
+		<p>With the lens placed at distance = 4.56, the front of the bunny is in focus with the surrounding scene out of focus.</p>
+		<p>With the lens placed at distance = 5.56, the bunny is out of focus with the walls and ceiling becoming in focus.</p>
+		<p>With the lens at 7.00, the entire scene returned to being out of focus. We can only see the bunny as a collection of bright copper pixels surrounded by gray walls.</p>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_50_456.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .050, focal distance = 4.56, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_200_456.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .200, focal distance = 4.56, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_750_456.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = .750, focal distance = 4.56, importance sampling.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj4/part4_bunny_256_1_5_1500_456.png">
+			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = 1.500, focal distance = 4.56, importance sampling.</figcaption>
+		</figure>
+		<p>Increasing the aperture of the lens causes more of the scene not in focus to be blurred. At radius = .050 the entire scene is in focus. With a small aperature the thin lens is very similar to a pinhole camera model.</p>
+		<p>Larger lens radii highligh a distinct plane of focus, causing pixels not on this plane to be increasingly out of focus. At radius = 1.500 all surrounding pixels not on the plane are out of focus. Of particular note are the bunny ears, which fade to a collection of bright pixels.</p>
+		<p></p>
+		<p></p>
+		<p></p>
+		<p></p>
+		<p></p>
 	</body>
 </html>
