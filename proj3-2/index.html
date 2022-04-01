@@ -3,8 +3,8 @@
 	</head>
 	<body>
 		<h1>Overview</h1>
-		<p>In this project I expanded on the raytracer implemented from Assignment 3-1, adding the ability to raytrace surfaces with microfacet BSDFs and a camera lens function. Both of these settings are customizable, allowing the user to change the properties of the final image. These properties include the focal distance and lens radius, and the roughness and refraction indices of primitives.</p>
-		<p>I approached each part by closely following the spec and using debugging methods when a returned image was not correct. For example, when calculating the reflected ray w_i across the sampled microfacet h I used a 3D vector grapher to visualize the rays returned. This helped with identifying the correct transformation used to modify w_so to return the correct w_i.</p>
+		<p>In this project I expanded on the raytracer implemented from Assignment 3-1, adding the ability to raytrace surfaces with microfacet BSDFs and a camera lens function. Both of these settings are customizable, allowing the user to change the properties of the final image. These properties include the focal distance and lens radius, and the roughness and refraction indices of primitives. The final result is a raytracer capable of rendering metallic surfaces with a simulated camera.</p>
+		<p>I approached each part by closely following the spec and using debugging methods when a returned image was not correct. For example, when calculating the reflected ray w_i across the sampled microfacet h I used a 3D vector grapher to visualize the rays returned. This helped with identifying the correct transformation used to obtain w_i.</p>
 		<p>My approach to part 4 was very similar to part 2, by following the spec the correct effect was returned.</p>
 		<p>A significant problem I encountered was the appearance of black pixels when rendering microfacet bsdfs. I discovered this issue to be related to an incorrect incident vector being returned as traveling inside the primitive as opposed to reflecting off the surface. This issue was fixed by using an accurate reflection equation.</p>
 		<p>However even after fixing this issue I noticed black pixels scattered inside the scene. This was resolved by ensuring that the wo and wi vectors were valid and did not return a dot product with n less than zero.</p>
@@ -85,8 +85,8 @@
 			<img src="../images/proj4/part4_bunny_256_1_5_1500_456.png">
 			<figcaption>CBBunny with copper BSDF, 256 samples per pixel, 1 sample per light, ray depth = 5, lens radius = 1.500, focal distance = 4.56, importance sampling.</figcaption>
 		</figure>
-		<p>Increasing the aperture of the lens causes more of the scene not in focus to be blurred. At radius = .050 the entire scene is in focus. With a small aperature the thin lens is very similar to a pinhole camera model.</p>
-		<p>Larger lens radii highligh a distinct plane of focus, causing pixels not on this plane to be increasingly out of focus. At radius = 1.500 all surrounding pixels not on the plane are out of focus. Of particular note are the bunny ears, which fade to a collection of bright pixels.</p>
+		<p>Increasing the aperture of the lens causes more of the scene not in focus to be blurred. At radius = .050 the entire scene is in focus. With a small aperture the thin lens is very similar to a pinhole camera model.</p>
+		<p>Larger lens radii highlight a distinct plane of focus, causing pixels not on this plane to be increasingly out of focus. At radius = 1.500 all surrounding pixels not on the plane are out of focus. Of particular note are the bunny ears, which fade to a collection of bright pixels.</p>
 		<p></p>
 		<p></p>
 		<p></p>
