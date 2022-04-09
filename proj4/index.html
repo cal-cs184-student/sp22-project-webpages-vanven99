@@ -3,7 +3,12 @@
 	</head>
 	<body>
 		<h1>Overview</h1>
+		<p>In this project I implemented a simulator for cloth meshes, capable of applying forces to the mesh through gravity, collisions with other objects, or self-collisions. The program is also able to render the cloth with different applied shaders, including phong and diffuse shading.</p>
 		<h1>Part 1: Masses and springs</h1>
+		<p>I implemented the buildGrid() function by first nesting two for loops which used emplace_back() to add each point mass to the point mass vector. Since the point mass vector is row major order, the outer loop loops over the y or z coordinates using num_height_points as the stopping condition, and the inner loop uses num_width_points. Then depending on the orientation of the cloth I assign the determined location to the point_mass position.</p>
+		<p>To create the springs between the point masses I looped through all point masses. Then for each point mass I create the correct type of spring if that point mass does not fail a boundary condition. For example there exist four cases when a shearing spring is created for a point mass: the point mass is on the leftmost side, rightmost side, in the middle, or on the top of the mesh.</p>
+		<p>To access the point mass not currently being looped through I used array math. So if I wanted the point mass above the current point mass I used i - this->num_width_points as the index.</p>
+		<p>I didn’t experience any significant bugs while implementing this function, as most of the difficulty came with ensuring that the point masses were located in the correct location and all of the springs were being generated.</p>
 		<figure>
 			<img src="../images/proj5/part1_all_constraints.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Wireframe display, density = 15, ks = 5000, damping = .20%, all constraints</figcaption>
@@ -21,6 +26,14 @@
 			<figcaption>Pinned2 with Wireframe display, density = 15, ks = 5000, damping = .20%.</figcaption>
 		</figure>
 		<h1>Part 2: Simulation via numerial integration</h1>
+		<p>I implemented simulate() by first zeroing out all previous point mass forces so that forces do not accumulate. Then I looped through all point masses and applied the external acceleration force by multiplying the force by the mass of the point mass.</p>
+		<p>Then to calculate spring forces I looped through all of the springs, and calculated the spring force using Hooke’s Law. Then I determined the direction of the force by subtracting the two point mass positions and normalizing. For the force applied to point mass A the direction is given by B.position() - A.position(), and the force applied to point mass B is in the opposite direction. Then I checked if the constraint is enabled and if the spring type matches and applied the force.</p>
+		<p>Bending constraints are slightly different, the only calculation modified is the spring force which I multiplied by 0.2 .</p>
+		<p>For verlet integration I followed the spec, first checking to see if the point mass is pinned. If it isn't, I calculate the next position using the formula provided, then I set the point mass last_position to the current position, and the point mass current position to the new position.</p>
+		<p>To implement Provot 1995 I first loop through all of the springs. Then I calculate the current length of the spring by subtracting the two point mass positions and finding the norm. If the length is greater than 1.10 * rest length then I have three different cases.</p>
+		<p>If point mass A is pinned then I set point mass B’s position to 1.10 * rest length away from point mass A in the direction of the vector. The situation is reversed if point mass B is pinned.</p>
+		<p>If neither are pinned then I calculate the midpoint between the two point masses. I then assign point mass A and B to be .55 * rest length away from the midpoint in the direction of the vector. This will achieve the final result of a spring at 1.10 * rest length.</p>
+		<p>I experienced a significant bug while working on part 2. While simulating the cloth would fall very slowly, and there would not be any indication of a significant effect of gravity on the cloth. With some help from TA’s Ajay and Anjali I determined this effect to be a result of the point mass positions being assigned to the index, not the actual position. Scaling each point mass's position by the total width and height solved this issue.</p>
 		<figure>
 			<img src="../images/proj5/part2_pinned2_default.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 15, ks = 5000, damping = .20%.</figcaption>
@@ -33,6 +46,8 @@
 			<img src="../images/proj5/part2_pinned2_high_ks.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 15, ks = 50000, damping = .20%.</figcaption>
 		</figure>
+		<p>With a very low ks the springs next to the pinned point mass extend rapidly, forming a very narrow section in the mesh. However because we restrict the amount the spring can extend, the cloth eventually rests at a state similar to normal ks.</p>
+		<p>With a high ks the top of the springs between the pinned point masses do not vary much in length, meaning there is a smaller curve between the two pinned point masses compared to normal ks. In addition while the cloth is traveling downward it unfurls uniformly and doesn’t twist midair.</p>
 		<figure>
 			<img src="../images/proj5/part2_pinned2_low_density.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 1, ks = 5000, damping = .20%.</figcaption>
@@ -41,6 +56,8 @@
 			<img src="../images/proj5/part2_pinned2_high_density.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 100, ks = 5000, damping = .20%.</figcaption>
 		</figure>
+		<p>With a low density the cloth simulates similarly to the high ks cloth. There is very little curving at the top of the cloth, as the effect of the gravity between the two pinned point masses is mostly counteracted by the decrease in density.</p>
+		<p>With a very high density the effect of gravity on the cloth is much greater, leading to a substantial curve between the two pinned point masses. The springs near the top also extend much faster than the springs at the bottom, leading to a rippling effect going down as the cloth reaches its resting state.</p>
 		<figure>
 			<img src="../images/proj5/part2_pinned2_low_damping.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 15, ks = 5000, damping = .00%.</figcaption>
@@ -49,11 +66,18 @@
 			<img src="../images/proj5/part2_pinned2_high_damping.PNG" width="600" height = "400">
 			<figcaption>Pinned2 with Normal display, density = 15, ks = 5000, damping = 1.00%.</figcaption>
 		</figure>
+		<p>With a very low damping the cloth retains almost all of its energy as it swings off the point masses, causing the cloth to take a much longer time getting to a final resting position. In addition the springs interspersed throughout the cloth continually move, leading to a constant rippling effect on the surface and edges of the cloth.</p>
+		<p>With a high damping the cloth falls very slowly, as it retains almost none of the energy from previous states. There is also a diminished rippling effect as the cloth travels downward, instead the cloth rotates on the two pinned point masses.</p>
 		<figure>
 			<img src="../images/proj5/part2_pinned4.PNG" width="600" height = "400">
 			<figcaption>Pinned4 with Normal display, density = 15, ks = 5000, damping = .20%.</figcaption>
 		</figure>
+		<p>While simulating the cloth the ratio between the internal spring forces and the external gravity force determines how the mesh will converge to a resting state. Lowering the ks and increasing the density allows gravity to influence the cloth more than the spring forces. Increasing the ks and lowering the density has the opposite effect, leading to a cloth that is more rigid at rest.</p>
 		<h1>Part 3: Handling collisions with other objects</h1>
+		<p>To implement sphere collisions I checked to see if the distance between the point mass and the sphere’s origin is less than or equal to the sphere’s radius. If it is, we can say that the point mass is intersecting the sphere.</p>
+		<p>Then I calculate the tangent position by first calculating the direction of the tangent vector, then finding the point at sphere radius away from sphere origin in the direction of the tangent vector. The correction vector is tangent position - point mass last position, and the point mass position is assigned to the equation given in the spec.</p>
+		<p>To implement plane collisions the code is similar to sphere collisions. The only difference is the distance is found by taking the dot product of the point mass position and the normal of the plane then normalizing. In addition the correction vector is modified by adding surface offset * the plane’s normal.</p>
+		<p>I utilize the collision functions by looping through all point masses and calling collision() on each primitive in the scene in simulate().</p>
 		<figure>
 			<img src="../images/proj5/part3_sphere_mid_ks.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with Normal display, density = 15, ks = 5000, damping = .20%.</figcaption>
@@ -70,7 +94,15 @@
 			<img src="../images/proj5/part3_plane.PNG" width="600" height = "400">
 			<figcaption>Plane collision with Normal display, density = 15, ks = 5000, damping = .20%.</figcaption>
 		</figure>
+		<p>With a very low ks the cloth is pulled down more by gravity, meaning there is a longer amount of cloth hanging directly below the sphere. This is because the spring forces in the cloth are not strong enough to resist the gravitational forces.</p>
+		<p>With a very high ks the cloth is more rigid, and the parts of the cloth that overhang come out at almost a 45 degree angle. This is the opposite effect of a low ks, where the gravitational forces are not enough to counteract the spring forces pulling the cloth flat.</p>
+		<p>With a medium ks the cloth is between the low and high ks, resting at a realistic state where the cloth retains some rigidity but is also pulled down by gravity.</p>
 		<h1>Part 4: Handling self-collisions</h1>
+		<p>To implement hash_position I first determine w, h, and t by the given equations. I then calculate the final hash by floor dividing each coordinate x, y, z by w, h, t respectively. I multiply the second result by 10000, and the third result by 100000000, and finally sum the numbers.</p>
+		<p>I multiply the second and third results so that two different point masses in different boxes do not return the same hash. For example, not multiplying would mean that a point mass with x = 1, y = 100, z = 10 would have the same hash as x = 1, y = 10, z = 100.</p>
+		<p>To implement build_spatial_map() I first obtain the hash for that point mass. Then I check to see if there exists a vector at map[hash]. If there isn't I create a new vector, else I append the point mass to the existing vector.</p>
+		<p>To implement self_collide I loop through the vector given by map[hash]. I check to see if the length between the current point mass and the candidate point mass is less than 2 * thickness. If it is, I add to the correction vector and increment the counter.</p>
+		<p>At the end of the loop I average the correction vector and divide by simulation_steps, then add the correction vector to the point mass position.</p>
 		<figure>
 			<img src="../images/proj5/part4_default_early.PNG" width="600" height = "400">
 			<figcaption>Self collision with Normal display, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
@@ -99,6 +131,7 @@
 			<img src="../images/proj5/part4_low_ks.PNG" width="600" height = "400">
 			<figcaption>Self collision with Normal display, density = 15, ks = 250, damping = .20%, restful state.</figcaption>
 		</figure>
+		<p>With a high density the cloth falls into itself and compresses into a tight roll, eventually spreading out into a rest state. With a low density the cloth folds in on itself in larger rolls, meaning there are fewer layers in the cloth as it converges.</p>
 		<figure>
 			<img src="../images/proj5/part4_high_density_early.PNG" width="600" height = "400">
 			<figcaption>Self collision with Normal display, density = 100, ks = 5000, damping = .20%, early state.</figcaption>
@@ -115,7 +148,14 @@
 			<img src="../images/proj5/part4_low_density.PNG" width="600" height = "400">
 			<figcaption>Self collision with Normal display, density = 1, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
+		<p>With a high ks the cloth retains rigidity as it descends, causing the rolls to be uniform and the same shape and size. With a low ks the cloth has many wrinkles in each roll, and there are many more layers in the final state.</p>
 		<h1>Part 5: Shaders</h1>
+		<p>For diffuse, phong, mirror, and texture shading the implementation was relatively simple as the needed values are provided by the fragment shader.</p>
+		<p>For displacement and bump shading the implementation was more difficult as I needed to calculate the dU and dV values for the local space normal, then apply the TBN matrix to find the model space normal.</p>
+		<p>A shader program is a collection of functions that map pixels to colors based on their location, normal, and tangent vectors relative to other pixels in the scene. Depending on the type of shader required, each pixel can be mapped to a specific uv value that corresponds to a location in a texture map, similar to the texture mapping seen in Assignment 1.</p>
+		<p>Vertex shaders take in the vertex attributes set in model space, then translate them to be in world space. This is important as we need to know where the vertex lies within the scene when we compute the final rasterization.</p>
+		<p>Fragment shaders take in the world space vertex attributes, then perform calculations to determine the final color to be assigned to the vertex.</p>
+		<p>These two programs work together to produce the final shading, the vertex shader provides the final location of the vertex in world space, while the fragment shader provides the color of that vertex.</p>
 		<h2>Task 1: Diffuse Shading</h2>
 		<figure>
 			<img src="../images/proj5/part5_diffuse_early.PNG" width="600" height = "400">
@@ -126,6 +166,10 @@
 			<figcaption>Sphere collision with Diffuse display, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
 		<h2>Task 2: Phong Shading</h2>
+		<p>The Blinn-Phong shading model is a combination of three separate shadings, an ambient shading, diffuse shading, and specular shading. These three shadings are summed to produce the final vertex color. It is useful for producing a shader capable of rendering objects with distant bright spots such as plastics.</p>
+		<p>The ambient shading is a constant defined by the user, affecting all vertices equally. </p>
+		<p>The diffuse shading is the light quantity that arrives from the light source independent of the camera position. This diffuse shading is multiplied by a lambertian constant.</p>
+		<p>The specular shading is similar to diffuse shading, however it is multiplied by a lambertian constant that depends on the bisection between the camera position and the light position.</p>
 		<figure>
 			<img src="../images/proj5/part5_phong_all_early.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with entire Phong display, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
@@ -157,6 +201,10 @@
 		</figure>
 		<h2>Task 4: Bump & Displacement Shading</h2>
 		<figure>
+			<img src="../images/proj5/texture_2.png" width="600" height = "400">
+			<figcaption>The texture used for bump and displacement mapping.</figcaption>
+		</figure>
+		<figure>
 			<img src="../images/proj5/part5_bump_cloth_default.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Bump display, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
 		</figure>
@@ -176,6 +224,8 @@
 			<img src="../images/proj5/part5_displacement_render_default.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Displacement display, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
+		<p>With bump mapping, the properties and locations of each vertex remain the same compared to other shading programs, so the only noticeable change is the texture on the cloth and sphere. </p>
+		<p>Since displacement mapping physically changes the coordinates of the vertices, the cloth has a “fuller” look with the texture on the cloth occupying space in the scene. Thus the simulation will change depending on the height and normal properties of the scene.</p>
 		<figure>
 			<img src="../images/proj5/part5_bump_sphere_16.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Bump display, a = 16, o = 16, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
@@ -185,20 +235,21 @@
 			<figcaption>Sphere collision with custom Bump display, a = 16, o = 16, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
 		<figure>
-			<img src="../images/proj5/part5_bump_sphere_128.PNG" width="600" height = "400">
-			<figcaption>Sphere collision with custom Bump display, a = 128, o = 128, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
-		</figure>
-		<figure>
-			<img src="../images/proj5/part5_bump_render_128.PNG" width="600" height = "400">
-			<figcaption>Sphere collision with custom Bump display, a = 128, o = 128, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
-		</figure>
-		<figure>
 			<img src="../images/proj5/part5_displacement_sphere_16.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Displacement display, a = 16, o = 16, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
 		</figure>
 		<figure>
 			<img src="../images/proj5/part5_displacement_render_16.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Displacement display, a = 16, o = 16, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
+		</figure>
+		<p>With a high amount of coarseness, the sphere in both bump and displacement mapping has rough edges and individual lines on the spheres are noticeable. There is not much difference between bump and displacement mapping.</p>
+		<figure>
+			<img src="../images/proj5/part5_bump_sphere_128.PNG" width="600" height = "400">
+			<figcaption>Sphere collision with custom Bump display, a = 128, o = 128, density = 15, ks = 5000, damping = .20%, early state.</figcaption>
+		</figure>
+		<figure>
+			<img src="../images/proj5/part5_bump_render_128.PNG" width="600" height = "400">
+			<figcaption>Sphere collision with custom Bump display, a = 128, o = 128, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
 		<figure>
 			<img src="../images/proj5/part5_displacement_sphere_128.PNG" width="600" height = "400">
@@ -208,6 +259,7 @@
 			<img src="../images/proj5/part5_displacement_render_128.PNG" width="600" height = "400">
 			<figcaption>Sphere collision with custom Displacement display, a = 128, o = 128, density = 15, ks = 5000, damping = .20%, restful state.</figcaption>
 		</figure>
+		<p>With a low amount of coarseness, the bump mapped sphere is rounder with no apparent defects. This is opposite the displacement mapped sphere, which still retains a coarse appearance due to the vertex positions actually changing positions depending on the texture applied.</p>
 		<h2>Task 5: Mirror Shading</h2>
 		<figure>
 			<img src="../images/proj5/part5_mirror_early.PNG" width="600" height = "400">
